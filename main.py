@@ -2,7 +2,7 @@
 
 import logging
 from modules.excel_download import download_excel
-# from modules.excel_processing import process_excel
+from modules.excel_processing import process_excel
 # from modules.woocommerce_sync import sync_products
 
 # Configuración del logging
@@ -21,10 +21,10 @@ def main():
         processed_data_path = 'data/processed_data.csv'
 
         # Paso 1: Descargar el Excel
-        download_excel(excel_path)
+        # download_excel(excel_path)
 
-        # # Paso 2: Procesar el Excel
-        # process_excel(excel_path, processed_data_path)
+        # Paso 2: Procesar el Excel
+        process_excel(excel_path, processed_data_path)
 
         # # Paso 3: Integrar con WooCommerce
         # sync_products(processed_data_path)
