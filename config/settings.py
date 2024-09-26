@@ -19,8 +19,8 @@ def get_env_variable(var_name, default_value=None, required=True):
 BASE_URL = get_env_variable('BASE_URL')
 
 # Credenciales para el login
-USERNAME = get_env_variable('USERNAME')
-PASSWORD = get_env_variable('PASSWORD')
+USERNAME = get_env_variable('ALIOO_USERNAME')
+PASSWORD = get_env_variable('ALIOO_PASSWORD')
 FACILITY_ID = get_env_variable('FACILITY_ID')
 CASH_REGISTER_ID = get_env_variable('CASH_REGISTER_ID')
 

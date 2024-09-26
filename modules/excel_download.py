@@ -4,12 +4,12 @@ import requests
 from urllib.parse import urljoin
 from datetime import datetime
 from config.settings import BASE_URL, USERNAME, FACILITY_ID, CASH_REGISTER_ID
-from authentication import get_cookies, get_token
+from .authentication import get_cookies, get_token
 
 def download_excel(output_path):
-    """
-    Descarga el archivo Excel y lo guarda en la ruta especificada.
-    """
+    # """
+    # Descarga el archivo Excel y lo guarda en la ruta especificada.
+    # """
     # Obtener token y cookies
     token = get_token()
     cookies = get_cookies()

@@ -2,8 +2,8 @@
 
 import logging
 from modules.excel_download import download_excel
-from modules.excel_processing import process_excel
-from modules.woocommerce_sync import sync_products
+# from modules.excel_processing import process_excel
+# from modules.woocommerce_sync import sync_products
 
 # Configuración del logging
 logging.basicConfig(
@@ -17,8 +17,8 @@ def main():
         logging.info("Inicio del proceso automatizado.")
 
         # Rutas de los archivos
-        excel_path = 'data/input/raw_excel.xlsx'
-        processed_data_path = 'data/output/processed_data.csv'
+        excel_path = 'data/raw_excel.xlsx'
+        processed_data_path = 'data/processed_data.csv'
 
         # Paso 1: Descargar el Excel
         download_excel(excel_path)
