@@ -40,5 +40,3 @@ def download_excel(output_path):
     # Guardar el contenido en un archivo
     with open(output_path, 'wb') as f:
         f.write(response.content)
-
-    print(f"Archivo Excel descargado y guardado en {output_path}")
