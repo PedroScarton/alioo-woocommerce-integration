@@ -4,6 +4,7 @@ import pandas as pd
 import os
 import requests
 import logging
+import imghdr
 
 def process_excel(input_path, output_path):
     """
@@ -63,10 +64,22 @@ def process_excel(input_path, output_path):
     # Procesar las URLs de las imágenes
     BASE_IMAGE_URL = 'http://mundobikes.ailoo.cl'
 
-    def process_image_url(image_path, product_id):
-        if pd.isna(image_path) or image_path.strip() == '':
-            logging.info(f"Producto ID {product_id} no tiene imagen.")
+    def process_image_urls(image_paths, product_id):
+        if pd.isna(image_paths) or image_paths.strip() == '':
+            logging.info(f"Producto ID {product_id} no tiene imagenes.")
             return ''
+        # Dividir las rutas de imágenes por coma
+        image_paths_list = [path.strip() for path in image_paths.split(',') if path.strip()]
+        processed_image_urls = []
+        for image_path in image_paths_list:
+            # Procesar cada ruta de imagen individualmente
+            image_url = process_single_image_url(image_path, product_id)
+            if image_url:
+                processed_image_urls.append(image_url)
+        # Combinar las URLs de imágenes procesadas en una cadena separada por comas
+        return ', '.join(processed_image_urls)
+
+    def process_single_image_url(image_path, product_id):
         # Eliminar el '/' inicial si existe
         image_path = image_path.lstrip('/')
         # Dividir la ruta en partes
@@ -92,17 +105,28 @@ def process_excel(input_path, output_path):
             new_image_name = f"{image_name}{size_suffix}{ext}"
             image_url = f"{BASE_IMAGE_URL}/Content/products/{domain_id}/{first_char}/{next_two_chars}/{new_image_name}"
             try:
-                response = requests.head(image_url, timeout=5)
-                if response.status_code == 200:
+                headers = {
+                    'Range': 'bytes=0-1023'  # Descargar solo los primeros 1024 bytes
+                }
+                response = requests.get(image_url, headers=headers, timeout=5)
+                content_type = response.headers.get('Content-Type', '')
+                if 'image' in content_type.lower():
                     return image_url
+                else:
+                    # Verificar los primeros bytes del contenido
+                    image_type = imghdr.what(None, h=response.content)
+                    if image_type:
+                        return image_url
+                    else:
+                        logging.debug(f"Contenido no es una imagen para el producto ID {product_id}, URL: {image_url}")
             except requests.RequestException as e:
                 logging.debug(f"Error al verificar la imagen para el producto ID {product_id}: {e}")
                 continue  # Intentar con el siguiente tamaño
         # Si ninguna imagen está disponible, registrar advertencia
-        logging.warning(f"No se encontró imagen disponible para el producto ID {product_id}.")
+        logging.warning(f"No se encontró imagen disponible para el producto ID {product_id} con la ruta '{image_path}'.")
         return ''  # O retornar la URL de una imagen predeterminada
 
-    df['Images'] = df.apply(lambda row: process_image_url(row['Imagenes Ailoo'], row['Id']), axis=1)
+    df['Images'] = df.apply(lambda row: process_image_urls(row['Imagenes Ailoo'], row['Id']), axis=1)
 
     # Renombrar y asegurar que el stock es un entero
     df['stock'] = df['Stock:Mundo Bikes'].fillna(0).astype(int)
