@@ -17,22 +17,22 @@ def main():
         logging.info("Inicio del proceso automatizado.")
 
         # Rutas de los archivos
-        excel_path = 'data/raw_excel.xlsx'
-        processed_data_path = 'data/processed_data.csv'
+        excel_path = 'data/input/raw_excel.xlsx'
+        processed_data_path = 'data/output/processed_data.csv'
 
         # Paso 1: Descargar el Excel
-        # download_excel(excel_path)
+        download_excel(excel_path)
 
         # Paso 2: Procesar el Excel
         process_excel(excel_path, processed_data_path)
 
-        # # Paso 3: Integrar con WooCommerce
+        # Paso 3: Integrar con WooCommerce
         # sync_products(processed_data_path)
 
-        # logging.info("Proceso completado exitosamente.")
+        logging.info("Proceso completado exitosamente.")
 
     except Exception as e:
-        logging.error(f"Ocurrió un error: {e}")
+        logging.error(f"Ocurrió un error en el proceso principal: {e}")
         raise
 
 if __name__ == "__main__":
