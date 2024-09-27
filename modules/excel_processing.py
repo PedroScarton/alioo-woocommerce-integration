@@ -2,13 +2,21 @@
 
 import pandas as pd
 import os
+import requests
+import logging
 
 def process_excel(input_path, output_path):
     """
-    Procesa el archivo Excel descargado y lo convierte al formato necesario para WooCommerce.
+    Procesa el archivo Excel descargado y lo convierte al formato necesario para WooCommerce,
+    manejando productos variables y sus variaciones.
     """
-    # Leer el Excel
-    df = pd.read_excel(input_path, engine='openpyxl')
+    try:
+        # Leer el Excel
+        df = pd.read_excel(input_path, engine='openpyxl')
+        logging.info(f"Archivo Excel '{input_path}' leído correctamente.")
+    except Exception as e:
+        logging.error(f"Error al leer el archivo Excel '{input_path}': {e}")
+        return
 
     # Seleccionar las columnas necesarias
     selected_columns = [
@@ -25,13 +33,24 @@ def process_excel(input_path, output_path):
         'Imagenes Ailoo',
         'Stock:Mundo Bikes'
     ]
+
+    # Verificar si todas las columnas necesarias están presentes
+    missing_columns = set(selected_columns) - set(df.columns)
+    if missing_columns:
+        logging.error(f"Columnas faltantes en el Excel: {missing_columns}")
+        return
+
     df = df[selected_columns]
 
     # Procesar la ruta de categorías
     def process_categories(row):
-        categories = row['Ruta Categorías'].split('/')
-        categories = [cat.strip() for cat in categories if cat.strip()]
-        return categories
+        try:
+            categories = row['Ruta Categorías'].split('/')
+            categories = [cat.strip() for cat in categories if cat.strip()]
+            return categories
+        except Exception as e:
+            logging.warning(f"Error al procesar categorías para el producto ID {row['Id']}: {e}")
+            return []
 
     df['Categorías'] = df.apply(process_categories, axis=1)
 
@@ -44,79 +63,207 @@ def process_excel(input_path, output_path):
     # Procesar las URLs de las imágenes
     BASE_IMAGE_URL = 'http://mundobikes.ailoo.cl'
 
-    def process_image_url(image_path):
+    def process_image_url(image_path, product_id):
         if pd.isna(image_path) or image_path.strip() == '':
+            logging.info(f"Producto ID {product_id} no tiene imagen.")
             return ''
         # Eliminar el '/' inicial si existe
         image_path = image_path.lstrip('/')
         # Dividir la ruta en partes
         parts = image_path.split('/')
         if len(parts) != 2:
-            # Formato inesperado
+            logging.warning(f"Formato inesperado de imagen para el producto ID {product_id}: '{image_path}'")
             return ''
         domain_id = parts[0]
         image_filename = parts[1]
         # Extraer el nombre del archivo y la extensión
         image_name, ext = os.path.splitext(image_filename)
         if len(image_name) < 3:
-            # Formato inesperado
+            logging.warning(f"Nombre de imagen inválido para el producto ID {product_id}: '{image_filename}'")
             return ''
         # Obtener los primeros tres caracteres
         first_three_chars = image_name[:3]
         first_char = first_three_chars[0]
         next_two_chars = first_three_chars[1:]
-        # Construir la nueva ruta de la imagen
-        new_image_name = f"{image_name}_900{ext}"
-        image_url = f"{BASE_IMAGE_URL}/Content/products/{domain_id}/{first_char}/{next_two_chars}/{new_image_name}"
-        return image_url
 
-    df['Images'] = df['Imagenes Ailoo'].apply(process_image_url)
+        # Lista de tamaños a probar
+        sizes = ['_900', '_150', '_75', '']  # El último intento sin sufijo de tamaño
+        for size_suffix in sizes:
+            new_image_name = f"{image_name}{size_suffix}{ext}"
+            image_url = f"{BASE_IMAGE_URL}/Content/products/{domain_id}/{first_char}/{next_two_chars}/{new_image_name}"
+            try:
+                response = requests.head(image_url, timeout=5)
+                if response.status_code == 200:
+                    return image_url
+            except requests.RequestException as e:
+                logging.debug(f"Error al verificar la imagen para el producto ID {product_id}: {e}")
+                continue  # Intentar con el siguiente tamaño
+        # Si ninguna imagen está disponible, registrar advertencia
+        logging.warning(f"No se encontró imagen disponible para el producto ID {product_id}.")
+        return ''  # O retornar la URL de una imagen predeterminada
+
+    df['Images'] = df.apply(lambda row: process_image_url(row['Imagenes Ailoo'], row['Id']), axis=1)
 
     # Renombrar y asegurar que el stock es un entero
     df['stock'] = df['Stock:Mundo Bikes'].fillna(0).astype(int)
+    df['In stock?'] = df['stock'].apply(lambda x: 1 if x > 0 else 0)
 
-    # Crear un DataFrame para WooCommerce
-    wc_df = pd.DataFrame()
+    # Agrupar productos por ID
+    grouped = df.groupby('Id')
 
-    # Mapear las columnas
-    wc_df['ID'] = df['Id']
-    wc_df['Type'] = 'simple'
-    wc_df['SKU'] = df['SKU']
-    wc_df['Name'] = df['Producto']
-    wc_df['Published'] = 1
-    wc_df['Is featured?'] = 0
-    wc_df['Visibility in catalog'] = 'visible'
-    wc_df['Short description'] = ''
-    wc_df['Description'] = ''
-    wc_df['Tax status'] = 'taxable'
-    wc_df['Tax class'] = ''
-    wc_df['In stock?'] = df['stock'].apply(lambda x: 1 if x > 0 else 0)
-    wc_df['Stock'] = df['stock']
-    wc_df['Backorders allowed?'] = 0
-    wc_df['Sold individually?'] = 0
-    wc_df['Regular price'] = df['Precio']
-    wc_df['Sale price'] = ''
-    wc_df['Categories'] = df['Categorías'].apply(lambda x: ', '.join(x))
-    wc_df['Tags'] = df['Etiquetas']
-    wc_df['Images'] = df['Images']
-    wc_df['Attribute 1 name'] = 'Marca'
-    wc_df['Attribute 1 value(s)'] = df['pa_marca']
-    wc_df['Attribute 1 visible'] = 1
-    wc_df['Attribute 1 global'] = 1
-    wc_df['Attribute 2 name'] = 'Modelo'
-    wc_df['Attribute 2 value(s)'] = df['pa_modelo']
-    wc_df['Attribute 2 visible'] = 1
-    wc_df['Attribute 2 global'] = 1
-    wc_df['Attribute 3 name'] = 'Tamaño'
-    wc_df['Attribute 3 value(s)'] = df['pa_tamano']
-    wc_df['Attribute 3 visible'] = 1
-    wc_df['Attribute 3 global'] = 1
-    wc_df['Attribute 4 name'] = 'Color'
-    wc_df['Attribute 4 value(s)'] = df['pa_color']
-    wc_df['Attribute 4 visible'] = 1
-    wc_df['Attribute 4 global'] = 1
+    # Lista para almacenar las filas finales
+    final_rows = []
+
+    for product_id, group in grouped:
+        try:
+            if len(group) == 1:
+                # Producto simple
+                row = create_simple_product_row(group.iloc[0])
+                final_rows.append(row)
+            else:
+                # Producto variable
+                # Crear fila del producto principal
+                parent_row = create_variable_product_row(group)
+                final_rows.append(parent_row)
+                # Crear filas para cada variación
+                variation_rows = create_variation_rows(group, parent_row['ID'])
+                final_rows.extend(variation_rows)
+        except Exception as e:
+            logging.error(f"Error al procesar el producto ID {product_id}: {e}")
+            continue  # Omitir este producto y continuar con el siguiente
+
+    # Crear DataFrame final
+    wc_df = pd.DataFrame(final_rows)
 
     # Guardar el DataFrame en un archivo CSV
-    wc_df.to_csv(output_path, index=False, encoding='utf-8')
+    try:
+        wc_df.to_csv(output_path, index=False, encoding='utf-8')
+        logging.info(f"Archivo procesado y guardado en '{output_path}'.")
+    except Exception as e:
+        logging.error(f"Error al guardar el archivo '{output_path}': {e}")
 
-    print(f"Archivo procesado y guardado en {output_path}")
+def create_simple_product_row(row):
+    # Crear una fila para un producto simple
+    wc_row = {
+        'ID': row['Id'],
+        'Type': 'simple',
+        'SKU': row['SKU'],
+        'Name': row['Producto'],
+        'Published': 1,
+        'Is featured?': 0,
+        'Visibility in catalog': 'visible',  # Valor válido
+        'Short description': '',
+        'Description': '',
+        'Tax status': 'taxable',
+        'Tax class': '',
+        'In stock?': row['In stock?'],
+        'Stock': row['stock'],
+        'Backorders allowed?': 0,
+        'Sold individually?': 0,
+        'Regular price': row['Precio'],
+        'Sale price': '',
+        'Categories': ', '.join(row['Categorías']),
+        'Tags': row['Etiquetas'],
+        'Images': row['Images'],
+        'Attribute 1 name': 'Marca',
+        'Attribute 1 value(s)': row['pa_marca'],
+        'Attribute 1 visible': 1,
+        'Attribute 1 global': 1,
+        'Attribute 2 name': 'Modelo',
+        'Attribute 2 value(s)': row['pa_modelo'],
+        'Attribute 2 visible': 1,
+        'Attribute 2 global': 1,
+        'Attribute 3 name': 'Tamaño',
+        'Attribute 3 value(s)': row['pa_tamano'],
+        'Attribute 3 visible': 1,
+        'Attribute 3 global': 1,
+        'Attribute 4 name': 'Color',
+        'Attribute 4 value(s)': row['pa_color'],
+        'Attribute 4 visible': 1,
+        'Attribute 4 global': 1,
+    }
+    return wc_row
+
+def create_variable_product_row(group):
+    # Crear una fila para el producto variable
+    row = group.iloc[0]
+    wc_row = {
+        'ID': row['Id'],
+        'Type': 'variable',
+        'SKU': row['SKU'],
+        'Name': row['Producto'],
+        'Published': 1,
+        'Is featured?': 0,
+        'Visibility in catalog': 'visible',  # Valor válido
+        'Short description': '',
+        'Description': '',
+        'Tax status': 'taxable',
+        'Tax class': '',
+        # Las siguientes columnas no se usan en el producto variable
+        'In stock?': '',
+        'Stock': '',
+        'Backorders allowed?': '',
+        'Sold individually?': 0,
+        'Regular price': '',
+        'Sale price': '',
+        'Categories': ', '.join(row['Categorías']),
+        'Tags': row['Etiquetas'],
+        'Images': row['Images'],
+    }
+
+    # Definir los atributos y sus valores posibles
+    attributes = ['pa_marca', 'pa_modelo', 'pa_tamano', 'pa_color']
+    attribute_index = 1
+    for attr in attributes:
+        values = group[attr].dropna().astype(str).unique()
+        values = [v for v in values if v != '']
+        if len(values) > 0:
+            wc_row[f'Attribute {attribute_index} name'] = attr.replace('pa_', '').capitalize()
+            wc_row[f'Attribute {attribute_index} value(s)'] = ', '.join(values)
+            wc_row[f'Attribute {attribute_index} visible'] = 1
+            wc_row[f'Attribute {attribute_index} global'] = 1
+            attribute_index += 1
+    return wc_row
+
+def create_variation_rows(group, parent_id):
+    # Crear filas para cada variación
+    variation_rows = []
+    for _, row in group.iterrows():
+        try:
+            wc_row = {
+                'ID': '',  # WooCommerce asignará un ID
+                'Type': 'variation',
+                'SKU': row['SKU'],
+                'Name': '',
+                'Published': 1,  # Aseguramos que la variación esté publicada
+                'Is featured?': '',
+                'Visibility in catalog': 'hidden',  # Valor válido para variaciones
+                'Short description': '',
+                'Description': '',
+                'Tax status': '',
+                'Tax class': '',
+                'In stock?': row['In stock?'],
+                'Stock': row['stock'],
+                'Backorders allowed?': 0,
+                'Sold individually?': '',
+                'Regular price': row['Precio'],
+                'Sale price': '',
+                'Categories': '',
+                'Tags': '',
+                'Images': row['Images'],
+                'Parent': parent_id,
+            }
+            # Añadir los atributos con sus valores específicos
+            attributes = ['pa_marca', 'pa_modelo', 'pa_tamano', 'pa_color']
+            attribute_index = 1
+            for attr in attributes:
+                value = row[attr]
+                if pd.notna(value) and value != '':
+                    wc_row[f'Attribute {attribute_index} name'] = attr.replace('pa_', '').capitalize()
+                    wc_row[f'Attribute {attribute_index} value(s)'] = value
+                    attribute_index += 1
+            variation_rows.append(wc_row)
+        except Exception as e:
+            logging.error(f"Error al crear la variación para el producto ID {parent_id}: {e}")
+            continue  # Omitir esta variación y continuar con las siguientes
+    return variation_rows
