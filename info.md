@@ -55,3 +55,33 @@ user=Leandro
 
 - **Programación de la Tarea Automatizada:**
   - Una vez validado, configurar la tarea programada en tu servidor.
+
+
+
+
+Id
+Marca
+Modelo
+Producto
+Ruta
+Categorías
+Categoria Primaria
+Categoría Padre
+Etiquetas
+Tamaños
+Colores
+Código Producto
+Códigos Interno
+Códigos de Barras
+SKU
+Costo
+Costo Ponderado
+Precio
+Id Precio
+Imagenes Ailoo
+Descuento
+Precio:Tienda
+Precio:Distribucion
+Precio:Internet
+Stock:Web
+Stock:Mundo Bikes

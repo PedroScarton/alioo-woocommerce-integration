@@ -6,7 +6,8 @@ from config.settings import BASE_URL, USERNAME, PASSWORD, FACILITY_ID, CASH_REGI
 
 def login():
     """
-    Realiza el login y retorna el token de autenticación y las cookies de sesión.
+    English version
+    Perform the login and return the authentication token and session cookies.
     """
     login_endpoint = "InventoryJSON/Login.rails"
     login_url = urljoin(BASE_URL, login_endpoint)
@@ -17,29 +18,29 @@ def login():
         "cashRegisterId": CASH_REGISTER_ID
     }
 
-    # Crear una sesión para mantener las cookies
+    # Create a session to persist the cookies
     session = requests.Session()
     response = session.get(login_url, params=params)
-    response.raise_for_status()  # Lanza una excepción si ocurre un error HTTP
+    response.raise_for_status()  #  Raise an exception for 4xx and 5xx status codes
 
     data = response.json()
     token = data['ailooContext']['token']
 
-    # Obtener las cookies de la sesión
+    # Get the cookies from the session
     cookies = session.cookies.get_dict()
 
     return token, cookies
 
 def get_token():
     """
-    Retorna el token de autenticación.
+    Return the authentication token for future requests.
     """
     token, _ = login()
     return token
 
 def get_cookies():
     """
-    Retorna las cookies de sesión necesarias para futuras peticiones.
+    Return the session cookies for future requests.
     """
     _, cookies = login()
     return cookies

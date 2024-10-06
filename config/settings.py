@@ -4,6 +4,8 @@ import os
 from dotenv import load_dotenv
 from pathlib import Path
 
+from woocommerce import API
+
 # Ruta al archivo .env
 env_path = Path(__file__).parent.parent / '.env'
 load_dotenv(dotenv_path=env_path)
@@ -28,3 +30,15 @@ CASH_REGISTER_ID = get_env_variable('CASH_REGISTER_ID')
 WOOCOMMERCE_URL = get_env_variable('WOOCOMMERCE_URL')
 WC_CONSUMER_KEY = get_env_variable('WC_CONSUMER_KEY')
 WC_CONSUMER_SECRET = get_env_variable('WC_CONSUMER_SECRET')
+
+# URL base de las imágenes
+BASE_IMAGE_URL='http://mundobikes.ailoo.cl'
+
+# Configuración de la API de WooCommerce
+
+wcapi = API(
+    url=WOOCOMMERCE_URL,
+    consumer_key=WC_CONSUMER_KEY,
+    consumer_secret=WC_CONSUMER_SECRET,
+    version="wc/v3"
+)
