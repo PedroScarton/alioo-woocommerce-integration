@@ -60,12 +60,12 @@ def main():
             df_new_simple.to_csv('data/new_simple.csv', index=False)
 
             # Format and create new products
-            format_simple_products(df_new_simple, category_name_to_id)
-            format_variable_products(df_new_variable, category_name_to_id)
+            new_simple_products = format_simple_products(df_new_simple, category_name_to_id)
+            new_variable_products = format_variable_products(df_new_variable, category_name_to_id)
 
             # Step 7: Create new products in WooCommerce
-            create_simple_products(wcapi, df_new_simple)
-            create_variable_products(wcapi, df_new_variable)
+            create_simple_products(wcapi, new_simple_products)
+            create_variable_products(wcapi, new_variable_products)
 
         # If there are products to update in WooCommerce (df_updated is not empty)
         if not df_updated.empty:
