@@ -25,7 +25,8 @@ def process_excel(input_path, output_path):
         'Producto',
         'Precio',
         'SKU',
-        'Ruta Categorías',
+        'Categoria Primaria',
+        'Categoría Padre',
         'Marca',
         'Modelo',
         'Tamaños',
@@ -43,17 +44,9 @@ def process_excel(input_path, output_path):
 
     df = df[selected_columns]
 
-    # Procesar la ruta de categorías
-    def process_categories(row):
-        try:
-            categories = row['Ruta Categorías'].split('/')
-            categories = [cat.strip() for cat in categories if cat.strip()]
-            return categories
-        except Exception as e:
-            logging.warning(f"Error al procesar categorías para el producto ID {row['Id']}: {e}")
-            return []
-
-    df['Categorías'] = df.apply(process_categories, axis=1)
+    # Renombrar y asegurar que el stock es un entero
+    df['stock'] = df['Stock:Mundo Bikes'].fillna(0).astype(int)
+    df['In stock?'] = df['stock'].apply(lambda x: 1 if x > 0 else 0)
 
     # Crear columnas para los atributos
     df['pa_marca'] = df['Marca']
@@ -128,10 +121,6 @@ def process_excel(input_path, output_path):
 
     df['Images'] = df.apply(lambda row: process_image_urls(row['Imagenes Ailoo'], row['Id']), axis=1)
 
-    # Renombrar y asegurar que el stock es un entero
-    df['stock'] = df['Stock:Mundo Bikes'].fillna(0).astype(int)
-    df['In stock?'] = df['stock'].apply(lambda x: 1 if x > 0 else 0)
-
     # Agrupar productos por ID
     grouped = df.groupby('Id')
 
@@ -181,7 +170,7 @@ def create_simple_product_row(row):
         'Tax status': 'taxable',
         'Tax class': '',
         'In stock?': row['In stock?'],
-        'Stock': row['Stock:Mundo Bikes'],
+        'Stock': row['stock'],
         'Backorders allowed?': 0,
         'Sold individually?': 0,
         'Regular price': row['Precio'],
@@ -267,7 +256,7 @@ def create_variation_rows(group, parent_id):
                 'Tax status': '',
                 'Tax class': '',
                 'In stock?': row['In stock?'],
-                'Stock': row['Stock:Mundo Bikes'],
+                'Stock': row['stock'],
                 'Backorders allowed?': 0,
                 'Sold individually?': '',
                 'Regular price': row['Precio'],
