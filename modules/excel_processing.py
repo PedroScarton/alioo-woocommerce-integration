@@ -181,12 +181,12 @@ def create_simple_product_row(row):
         'Tax status': 'taxable',
         'Tax class': '',
         'In stock?': row['In stock?'],
-        'Stock': row['stock'],
+        'Stock': row['Stock:Mundo Bikes'],
         'Backorders allowed?': 0,
         'Sold individually?': 0,
         'Regular price': row['Precio'],
         'Sale price': '',
-        'Categories': ', '.join(row['Categorías']),
+        'Categories': format_category(row['Categoría Padre'], row['Categoria Primaria']),
         'Tags': row['Etiquetas'],
         'Images': row['Images'],
         'Attribute 1 name': 'Marca',
@@ -230,7 +230,7 @@ def create_variable_product_row(group):
         'Sold individually?': 0,
         'Regular price': '',
         'Sale price': '',
-        'Categories': ', '.join(row['Categorías']),
+        'Categories': format_category(row['Categoría Padre'], row['Categoria Primaria']),
         'Tags': row['Etiquetas'],
         'Images': row['Images'],
     }
@@ -255,19 +255,19 @@ def create_variation_rows(group, parent_id):
     for _, row in group.iterrows():
         try:
             wc_row = {
-                'ID': '',  # WooCommerce asignará un ID
+                'ID': '',
                 'Type': 'variation',
                 'SKU': row['SKU'],
                 'Name': '',
-                'Published': 1,  # Aseguramos que la variación esté publicada
+                'Published': 1,
                 'Is featured?': '',
-                'Visibility in catalog': 'hidden',  # Valor válido para variaciones
+                'Visibility in catalog': 'visible',
                 'Short description': '',
                 'Description': '',
                 'Tax status': '',
                 'Tax class': '',
                 'In stock?': row['In stock?'],
-                'Stock': row['stock'],
+                'Stock': row['Stock:Mundo Bikes'],
                 'Backorders allowed?': 0,
                 'Sold individually?': '',
                 'Regular price': row['Precio'],
@@ -291,3 +291,23 @@ def create_variation_rows(group, parent_id):
             logging.error(f"Error al crear la variación para el producto ID {parent_id}: {e}")
             continue  # Omitir esta variación y continuar con las siguientes
     return variation_rows
+
+
+def format_category(categoria_padre, categoria_primaria):
+    # Verificar si existe la categoría padre
+    if categoria_padre:
+        formatted_category = categoria_padre.strip()
+    else:
+        formatted_category = ""
+
+    # Verificar si existe la categoría primaria
+    if categoria_primaria:
+        categorias_primarias = [cat.strip() for cat in categoria_primaria.split(',')]  # Separar por coma y quitar espacios
+        if formatted_category:
+            # Si hay categoría padre, agregar '>' y luego las categorías primarias unidas
+            formatted_category += " > " + " > ".join(categorias_primarias)
+        else:
+            # Si no hay categoría padre, solo las categorías primarias
+            formatted_category = " > ".join(categorias_primarias)
+
+    return formatted_category
