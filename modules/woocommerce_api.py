@@ -1,5 +1,6 @@
 import logging
 import pandas as pd
+import requests
 
 def get_all_woocommerce_products(wcapi):
     try:
@@ -22,10 +23,20 @@ def get_all_woocommerce_products(wcapi):
 def create_simple_products(wcapi, products):
     for product in products:
         try:
-            response = wcapi.post("products", product).json()
-            logging.info(f"Created simple product '{product['name']}' with SKU '{product['sku']}'")
+            response = wcapi.post("products", product)
+            response_data = response.json()
+            print(response_data)
+            if response.status_code in [200, 201]:
+                logging.info(f"Created simple product '{product['name']}' with SKU '{product['sku']}'")
+            else:
+                error_message = response_data.get('message', 'Unknown error')
+                logging.error(f"Failed to create simple product '{product['name']}' with SKU '{product['sku']}': {error_message}")
+                logging.info(f"Product JSON: {product}")
+        except requests.exceptions.Timeout:
+            logging.error(f"Timeout occurred while creating simple product '{product['name']}' with SKU '{product['sku']}'")
         except Exception as e:
             logging.error(f"Error creating simple product '{product['name']}': {e}")
+            logging.info(f"Product JSON: {product}")
 
 
 def create_variable_products(wcapi, products):
@@ -34,35 +45,75 @@ def create_variable_products(wcapi, products):
         variations = item['variations']
         try:
             # Create parent product
-            response = wcapi.post("products", parent_product).json()
-            parent_id = response['id']
-            logging.info(f"Created variable product '{parent_product['name']}' with SKU '{parent_product['sku']}'")
+            response = wcapi.post("products", parent_product)
+            response_data = response.json()
+            if response.status_code == 201:
+                parent_id = response_data['id']
+                logging.info(f"Created variable product '{parent_product['name']}' with SKU '{parent_product['sku']}'")
+            else:
+                error_message = response_data.get('message', 'Unknown error')
+                logging.error(f"Failed to create variable product '{parent_product['name']}': {error_message}")
+                logging.info(f"Product JSON: {parent_product}")
+                continue  # No continuar con las variaciones si falla la creación del padre
 
             # Create variations
             for variation in variations:
-                variation_response = wcapi.post(f"products/{parent_id}/variations", variation).json()
-                logging.info(f"Created variation with SKU '{variation['sku']}' for product ID {parent_id}")
+                variation_response = wcapi.post(f"products/{parent_id}/variations", variation)
+                variation_data = variation_response.json()
+                if variation_response.status_code == 201:
+                    logging.info(f"Created variation with SKU '{variation['sku']}' for product ID {parent_id}")
+                else:
+                    error_message = variation_data.get('message', 'Unknown error')
+                    logging.error(f"Failed to create variation with SKU '{variation['sku']}' for product ID {parent_id}: {error_message}")
+                    logging.info(f"Variation JSON: {variation}")
+        except requests.exceptions.Timeout:
+            logging.error(f"Timeout occurred while creating variable product '{parent_product['name']}'")
         except Exception as e:
             logging.error(f"Error creating variable product '{parent_product['name']}': {e}")
+            logging.info(f"Variation JSON: {variations}")
 
 
 def update_products(wcapi, products):
     for product in products:
         try:
             product_id = product.pop('id')
-            response = wcapi.put(f"products/{product_id}", product).json()
-            logging.info(f"Updated product ID {product_id} with SKU '{product.get('sku', '')}'")
+            response = wcapi.put(f"products/{product_id}", product)
+            response_data = response.json()
+            if response.status_code in [200, 201]:
+                logging.info(f"Updated product '{product.get('name', '')}' with SKU '{product.get('sku', '')}'")
+            else:
+                error_message = response_data.get('message', 'Unknown error')
+                logging.error(f"Failed to update product ID '{product_id}': {error_message}")
+                logging.info(f"Product JSON: {product}")
+        except requests.exceptions.Timeout:
+            logging.error(f"Timeout occurred while updating product ID '{product_id}'")
         except Exception as e:
-            logging.error(f"Error updating product ID {product_id}: {e}")
+            logging.error(f"Error updating product ID '{product_id}': {e}")
+            logging.info(f"Product JSON: {product}")
 
-def delete_products(wcapi, df_delete):
-    for index, row in df_delete.iterrows():
-        product_id = row['id']
+def delete_products_batch(wcapi, product_ids, batch_size=20):
+    for i in range(0, len(product_ids), batch_size):
+        batch_ids = product_ids[i:i + batch_size]
+        data = {
+            "delete": batch_ids
+        }
         try:
-            response = wcapi.delete(f"products/{product_id}", params={"force": True}).json()
-            logging.info(f"Deleted product ID {product_id} with SKU '{row['sku']}'")
+            response = wcapi.post("products/batch", data)
+            response_data = response.json()
+            if response.status_code in [200, 201]:
+                deleted_products = response_data.get('delete', [])
+                for product in deleted_products:
+                    logging.info(f"Deleted product ID '{product['id']}'")
+                errors = response_data.get('errors', [])
+                for error in errors:
+                    logging.error(f"Error deleting product: {error}")
+            else:
+                error_message = response_data.get('message', 'Unknown error')
+                logging.error(f"Failed to delete product batch: {error_message}")
+        except requests.exceptions.Timeout:
+            logging.error(f"Timeout occurred while deleting product batch starting at index {i}")
         except Exception as e:
-            logging.error(f"Error deleting product ID {product_id}: {e}")
+            logging.error(f"Error deleting product batch starting at index {i}: {e}")
 
 def get_variations_for_product(wcapi, parent_id):
     try:
@@ -112,3 +163,42 @@ def update_variable_products(wcapi, variable_products):
 
         except Exception as e:
             logging.error(f"Error updating variable product ID {parent_id}: {e}")
+
+
+def get_all_woocommerce_categories(wcapi):
+    try:
+        categories = []
+        page = 1
+        while True:
+            response = wcapi.get("products/categories", params={"per_page": 100, "page": page})
+            data = response.json()
+            if not data:
+                break
+            categories.extend(data)
+            page += 1
+        # Build a mapping from category name to ID
+        category_name_to_id = {cat['name']: cat['id'] for cat in categories}
+        logging.info("Fetched all categories from WooCommerce.")
+        return category_name_to_id
+    except Exception as e:
+        logging.error(f"Error fetching categories from WooCommerce: {e}")
+        raise
+
+
+def create_missing_categories(wcapi, category_names, existing_categories):
+    new_categories = {}
+    for category_name in category_names:
+        if category_name not in existing_categories:
+            try:
+                data = {"name": category_name}
+                response = wcapi.post("products/categories", data).json()
+                category_id = response.get('id')
+                if category_id:
+                    existing_categories[category_name] = category_id
+                    new_categories[category_name] = category_id
+                    logging.info(f"Created new category '{category_name}' with ID {category_id}")
+                else:
+                    logging.error(f"Failed to create category '{category_name}': {response}")
+            except Exception as e:
+                logging.error(f"Error creating category '{category_name}': {e}")
+    return existing_categories
