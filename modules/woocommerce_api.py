@@ -25,7 +25,6 @@ def create_simple_products(wcapi, products):
         try:
             response = wcapi.post("products", product)
             response_data = response.json()
-            print(response_data)
             if response.status_code in [200, 201]:
                 logging.info(f"Created simple product '{product['name']}' with SKU '{product['sku']}'")
             else:
