@@ -40,5 +40,6 @@ wcapi = API(
     url=WOOCOMMERCE_URL,
     consumer_key=WC_CONSUMER_KEY,
     consumer_secret=WC_CONSUMER_SECRET,
-    version="wc/v3"
+    version="wc/v3",
+    timeout=60
 )
