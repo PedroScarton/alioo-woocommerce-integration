@@ -1,5 +1,5 @@
 requests==2.28.1
 pandas==2.2.3
 openpyxl==3.1.5
-woocommerce==2.1.1
+woocommerce==3.0.0
 python-dotenv==0.20.0
