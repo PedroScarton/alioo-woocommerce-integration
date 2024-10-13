@@ -34,7 +34,7 @@ def process_single_image_url(image_path, product_id):
     first_char = first_three_chars[0]
     next_two_chars = first_three_chars[1:]
 
-    sizes = ['_900', '_150', '_100', '_75']
+    sizes = ['_900', '_150', '_75']
     for size_suffix in sizes:
         new_image_name = f"{image_name}{size_suffix}{ext}"
         image_url = f"{BASE_IMAGE_URL}/Content/products/{domain_id}/{first_char}/{next_two_chars}/{new_image_name}"
