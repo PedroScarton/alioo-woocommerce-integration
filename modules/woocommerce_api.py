@@ -18,7 +18,8 @@ def get_all_woocommerce_products(wcapi):
         # Skip persistent product in woocommerce
         persistent_product_name = ['Booknetic']
 
-        df_wc = df_wc[~df_wc['name'].isin(persistent_product_name)]
+        if (not df_wc.empty) and ('name' in df_wc.columns):
+            df_wc = df_wc[~df_wc['name'].isin(persistent_product_name)]
 
         logging.info("Fetched all products from WooCommerce.")
         return df_wc
