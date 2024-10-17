@@ -4,28 +4,24 @@ import logging
 from .image_processing import process_image_urls
 from .woocommerce_api import get_variations_for_product
 
-def prepare_dataframes(df_excel, df_wc):
+def pre_process_df(df_excel):
     # Remove products without SKU from df_excel
     df_excel = df_excel.dropna(subset=['SKU'])
     df_excel = df_excel[df_excel['SKU'].astype(str).str.strip() != '']
-    df_excel = df_excel.copy()  # Avoid SettingWithCopyWarning
-    df_excel['SKU'] = df_excel['SKU'].astype(str).str.strip()  # Remove rows where SKU is an empty string
 
-    # Handle df_wc when it's empty
-    if not df_wc.empty and 'sku' in df_wc.columns:
-        df_wc = df_wc.copy()  # Avoid SettingWithCopyWarning
-        df_wc['sku'] = df_wc['sku'].astype(str).str.strip()
-    else:
-        # Ensure df_wc has the 'sku' column even if it's empty
-        df_wc = pd.DataFrame(columns=['sku'])
+    # Add categories column to df_excel
+    df_excel['categories'] = None
 
-    return df_excel, df_wc
+    # Return the updated dataframe
+    return df_excel
+
 
 def map_sku_to_id(df_wc):
     sku_to_id = df_wc.set_index('sku')['id'].to_dict()
     return sku_to_id
 
 def identify_products(df_excel, df_wc):
+
     # SKUs in Excel
     excel_skus = set(df_excel['SKU'])
 
@@ -48,7 +44,8 @@ def identify_products(df_excel, df_wc):
     if not df_wc.empty:
         df_delete = df_wc[df_wc['sku'].isin(delete_skus)]
     else:
-        df_delete = pd.DataFrame(columns=df_wc.columns)  # Empty DataFrame with same columns
+        df_delete = pd.DataFrame(columns=df_wc.columns)
+
     return df_new, df_updated, df_delete
 
 def map_variation_sku_to_id(variations):
@@ -153,7 +150,7 @@ def format_simple_products(df_simple, category_name_to_id):
     return products
 
 
-def format_variable_products(df_variable, category_name_to_id):
+def format_variable_products(df_variable):
     products = []
     # Group by Id
     grouped = df_variable.groupby('Id')
@@ -163,27 +160,27 @@ def format_variable_products(df_variable, category_name_to_id):
 
         # Get category IDs
         categories = []
-        primary_category = str(first_row['Categoria Primaria']).strip()
-        parent_category = str(first_row['Categoría Padre']).strip()
-        if primary_category and primary_category in category_name_to_id:
-            categories.append({"id": category_name_to_id[primary_category]})
-        if parent_category and parent_category in category_name_to_id:
-            categories.append({"id": category_name_to_id[parent_category]})
+        # primary_category = str(first_row['Categoria Primaria']).strip()
+        # parent_category = str(first_row['Categoría Padre']).strip()
+        # if primary_category and primary_category in category_name_to_id:
+        #     categories.append({"id": category_name_to_id[primary_category]})
+        # if parent_category and parent_category in category_name_to_id:
+        #     categories.append({"id": category_name_to_id[parent_category]})
+
+        # Generate the parent SKU based on the name of the product
+        parent_sku = first_row['Producto'].lower().replace(' ', '-')
+
 
         # Parent product
         parent_product = {
             "name": first_row['Producto'],
             "type": "variable",
-            "sku": first_row['SKU'],
+            "sku": parent_sku,
             "description": first_row['Descripción'] if 'Descripción' in first_row and not pd.isna(first_row['Descripción']) else '',
             "categories": categories,
             # "tags": [{"name": tag.strip()} for tag in str(first_row['Etiquetas']).split(',') if tag.strip()],
+            "images": []
         }
-
-        # Process images using the process_image_urls function
-        image_urls = process_image_urls(first_row['Imagenes Ailoo'], first_row['Id'])
-        if image_urls:
-            parent_product["images"] = [{"src": url.strip()} for url in image_urls.split(',') if url.strip()]
 
         # Update custom fields as attributes
         attributes = []
@@ -243,14 +240,15 @@ def format_variable_products(df_variable, category_name_to_id):
                 "attributes": [],
                 "manage_stock": True,
                 "stock_quantity": int(row['Stock:Mundo Bikes']) if 'Stock:Mundo Bikes' in row and not pd.isna(row['Stock:Mundo Bikes']) else 0,
+                "images": []
             }
 
             # Process images using the process_image_urls function
-            variation_image_urls = process_image_urls(row['Imagenes Ailoo'], row['Id'])
-            if variation_image_urls:
-                # Use the first image as the variation image
-                variation_image_url = variation_image_urls.split(',')[0]
-                variation["image"] = {"src": variation_image_url.strip()}
+            # variation_image_urls = process_image_urls(row['Imagenes Ailoo'], row['Id'])
+            # if variation_image_urls:
+            #     # Use the first image as the variation image
+            #     variation_image_url = variation_image_urls.split(',')[0]
+            #     variation["image"] = {"src": variation_image_url.strip()}
 
             # Add variation attributes
             for attr_name in ['Tamaños', 'Colores']:
