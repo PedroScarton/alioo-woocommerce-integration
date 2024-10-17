@@ -14,6 +14,12 @@ def get_all_woocommerce_products(wcapi):
             products.extend(data)
             page += 1
         df_wc = pd.DataFrame(products)
+
+        # Skip persistent product in woocommerce
+        persistent_product_name = ['Booknetic']
+
+        df_wc = df_wc[~df_wc['name'].isin(persistent_product_name)]
+
         logging.info("Fetched all products from WooCommerce.")
         return df_wc
     except Exception as e:
@@ -185,19 +191,26 @@ def get_all_woocommerce_categories(wcapi):
 
 
 def create_missing_categories(wcapi, category_names, existing_categories):
-    new_categories = {}
-    for category_name in category_names:
-        if category_name not in existing_categories:
-            try:
-                data = {"name": category_name}
-                response = wcapi.post("products/categories", data).json()
-                category_id = response.get('id')
-                if category_id:
-                    existing_categories[category_name] = category_id
-                    new_categories[category_name] = category_id
-                    logging.info(f"Created new category '{category_name}' with ID {category_id}")
-                else:
-                    logging.error(f"Failed to create category '{category_name}': {response}")
-            except Exception as e:
-                logging.error(f"Error creating category '{category_name}': {e}")
+
+    # Get existing categories from existing_categories dict (keys)
+    existing_categorie_names = existing_categories.keys()
+
+    # Get missing categories in category_names list
+    missing_categories = list(set(category_names) - set(existing_categorie_names))
+
+    # Create missing categories
+    for category_name in missing_categories:
+        try:
+            data = {"name": category_name}
+            response = wcapi.post("products/categories", data).json()
+            category_id = response.get('id')
+            if category_id:
+                existing_categories[category_name] = category_id
+                logging.info(f"Created new category '{category_name}' with ID {category_id}")
+            else:
+                logging.error(f"Failed to create category '{category_name}': {response}")
+        except Exception as e:
+            logging.error(f"Error creating category '{category_name}': {e}")
+
+
     return existing_categories
