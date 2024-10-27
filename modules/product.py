@@ -289,10 +289,8 @@ def format_updated_simple_products(df_simple, sku_to_id, category_name_to_id):
         product = {
             "id": product_id,
             "name": row['Producto'],
-            "type": "simple",
             "regular_price": str(row['Precio']),
             "sku": row['SKU'],
-            "description": row['Descripción'] if 'Descripción' in row and not pd.isna(row['Descripción']) else '',
             "categories": categories,
             # "tags": [{"name": tag.strip()} for tag in str(row['Etiquetas']).split(',') if tag.strip()],
             "manage_stock": True,
@@ -301,9 +299,9 @@ def format_updated_simple_products(df_simple, sku_to_id, category_name_to_id):
         }
 
         # Process images using the process_image_urls function
-        image_urls = process_image_urls(row['Imagenes Ailoo'], row['Id'])
-        if image_urls:
-            product["images"] = [{"src": url.strip()} for url in image_urls.split(',') if url.strip()]
+        # image_urls = process_image_urls(row['Imagenes Ailoo'], row['Id'])
+        # if image_urls:
+        #     product["images"] = [{"src": url.strip()} for url in image_urls.split(',') if url.strip()]
 
         # Update custom fields as attributes
         attributes = []
