@@ -143,6 +143,12 @@ def format_simple_products(df_simple, category_name_to_id):
                 "variation": False
             })
 
+        # Proveedor
+        attributes.append({ "name": "Proveedor", "options": "Alioo", "visible": False, "variation": False })
+
+        # Proveedor
+        attributes.append({ "name": "Alioo ID", "options": row['Id'], "visible": False, "variation": False })
+
         if attributes:
             product['attributes'] = attributes
 
@@ -344,8 +350,15 @@ def format_updated_simple_products(df_simple, sku_to_id, category_name_to_id):
                 "variation": False
             })
 
+        # Proveedor
+        attributes.append({ "name": "Proveedor", "options": "Alioo", "visible": False, "variation": False })
+
+        # Proveedor
+        attributes.append({ "name": "Alioo ID", "options": row['Id'], "visible": False, "variation": False })
+
         if attributes:
             product['attributes'] = attributes
+
 
         products.append(product)
     return products
