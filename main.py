@@ -7,8 +7,8 @@ from config.settings import wcapi
 from modules.excel_download import download_excel
 from modules.read_excel import read_excel
 from modules.woocommerce_api import get_all_woocommerce_products
-from modules.product import pre_process_df, identify_products, separate_simple_and_variable, format_simple_products, format_variable_products, format_updated_simple_products, map_sku_to_id, format_updated_variable_products
-from modules.woocommerce_api import create_simple_products, create_variable_products, update_products, delete_products_batch, update_variable_products, get_all_woocommerce_categories, create_missing_categories
+from modules.product import pre_process_df, identify_products, separate_simple_and_variable, format_simple_products, format_updated_simple_products, map_sku_to_id
+from modules.woocommerce_api import create_simple_products, update_products, delete_products_batch, get_all_woocommerce_categories, create_missing_categories
 from modules.dataframe_operations import get_unique_categories
 
 # Configuración del logging
@@ -56,41 +56,46 @@ def main():
 
             # Format and create new products
             new_simple_products = format_simple_products(df_new_simple, category_name_to_id)
-            # new_variable_products = format_variable_products(df_new_variable)
+            # new_variable_products = format_variable_products(df_new_variable) # DISABLED FOR NOW
 
             # Step 7: Create new products in WooCommerce
             create_simple_products(wcapi, new_simple_products)
-            # create_variable_products(wcapi, new_variable_products)
+            # create_variable_products(wcapi, new_variable_products) # DISABLED FOR NOW
 
-        # # If there are products to update in WooCommerce (df_updated is not empty)
-        # if not df_updated.empty:
-        #     logging.info(f"Found {len(df_updated)} products to update.")
-        #     # Step 9: Map SKU to WooCommerce ID
-        #     sku_to_id = map_sku_to_id(df_wc)
+        # If there are products to update in WooCommerce (df_updated is not empty)
+        if not df_updated.empty:
+            logging.info(f"Found {len(df_updated)} products to update.")
+            # Step 9: Map SKU to WooCommerce ID
+            sku_to_id = map_sku_to_id(df_wc)
 
-        #     # Step 10: Process updated products
-        #     df_updated_simple, df_updated_variable = separate_simple_and_variable(df_updated)
+            # Step 10: Process updated products
+            df_updated_simple, df_updated_variable = separate_simple_and_variable(df_updated)
 
-        #     # Step 11: Format products
-        #     updated_simple_products = format_updated_simple_products(df_updated_simple, sku_to_id, category_name_to_id)
-        #     updated_variable_products = format_updated_variable_products(df_updated_variable, sku_to_id, category_name_to_id, wcapi)
+            # Step 11: Format products
+            updated_simple_products = format_updated_simple_products(df_updated_simple, sku_to_id, category_name_to_id)
+            # updated_variable_products = format_updated_variable_products(df_updated_variable, sku_to_id, category_name_to_id, wcapi) # DISABLED FOR NOW
 
+            # Step 12: Update products in WooCommerce
+            update_products(wcapi, updated_simple_products)
 
-        #     # Step 12: Update products in WooCommerce
-        #     update_products(wcapi, updated_simple_products)
-        #     update_variable_products(wcapi, updated_variable_products)
-        #     logging.info("Products updated.")
-        # else:
-        #     logging.info("No products to update.")
+            # update_variable_products(wcapi, updated_variable_products) # DISABLED FOR NOW
+            logging.info("Products updated.")
+        else:
+            logging.info("No products to update.")
 
-        # if not df_delete.empty:
-        #     logging.info(f"Found {len(df_delete)} products to delete.")
-        #     # Step 13: Delete products in WooCommerce that are not in the Excel file
-        #     product_ids_to_delete = df_delete['id'].tolist()
-        #     delete_products_batch(wcapi, product_ids_to_delete)
-        #     logging.info("Products deleted.")
-        # else:
-        #     logging.info("No products to delete.")
+        if not df_delete.empty:
+            # logging.info(f"Found {len(df_delete)} products to delete.")
+
+            # Step 13: Delete products in WooCommerce that are not in the Excel file
+            # product_ids_to_delete = df_delete['id'].tolist()
+
+            # print(product_ids_to_delete)
+
+            # delete_products_batch(wcapi, product_ids_to_delete)
+
+            logging.info("Products deleted.")
+        else:
+            logging.info("No products to delete.")
 
         logging.info("Process finished successfully.")
 
