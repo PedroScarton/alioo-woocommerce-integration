@@ -25,6 +25,7 @@ USERNAME = get_env_variable('ALIOO_USERNAME')
 PASSWORD = get_env_variable('ALIOO_PASSWORD')
 FACILITY_ID = get_env_variable('FACILITY_ID')
 CASH_REGISTER_ID = get_env_variable('CASH_REGISTER_ID')
+ALIOO_API_KEY = get_env_variable('ALIOO_API_KEY')
 
 # Configuración de WooCommerce
 WOOCOMMERCE_URL = get_env_variable('WOOCOMMERCE_URL')

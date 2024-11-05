@@ -3,6 +3,7 @@ import logging
 
 from .image_processing import process_image_urls
 from .woocommerce_api import get_variations_for_product
+from .alioo.alioo_inventory import get_product_item_id
 
 def pre_process_df(df_excel):
     # Remove products without SKU from df_excel
@@ -146,8 +147,15 @@ def format_simple_products(df_simple, category_name_to_id):
         # Proveedor
         attributes.append({ "name": "Proveedor", "options": "Alioo", "visible": False, "variation": False })
 
-        # Proveedor
-        attributes.append({ "name": "Alioo ID", "options": row['Id'], "visible": False, "variation": False })
+        # Getting product item id from alioo
+        product_item_id = get_product_item_id(row['SKU'])
+
+        if not product_item_id:
+            logging.warning(f"Product with SKU '{row['SKU']}' not found in Alioo.")
+            continue
+
+        # Alioo ID
+        attributes.append({ "name": "Alioo ID", "options": product_item_id, "visible": False, "variation": False })
 
         if attributes:
             product['attributes'] = attributes
@@ -353,8 +361,15 @@ def format_updated_simple_products(df_simple, sku_to_id, category_name_to_id):
         # Proveedor
         attributes.append({ "name": "Proveedor", "options": "Alioo", "visible": False, "variation": False })
 
-        # Proveedor
-        attributes.append({ "name": "Alioo ID", "options": row['Id'], "visible": False, "variation": False })
+        # Getting product item id from alioo
+        product_item_id = get_product_item_id(row['SKU'])
+
+        if not product_item_id:
+            logging.warning(f"Product with SKU '{row['SKU']}' not found in Alioo.")
+            continue
+
+        # Alioo ID
+        attributes.append({ "name": "Alioo ID", "options": product_item_id, "visible": False, "variation": False })
 
         if attributes:
             product['attributes'] = attributes
