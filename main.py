@@ -20,6 +20,9 @@ logging.basicConfig(
 
 def main():
     try:
+        # Clear log file
+        open('logs/app.log', 'w').close()
+
         logging.info("Starting process...")
 
         # File paths
@@ -62,9 +65,6 @@ def main():
 
             # Create new products in WooCommerce
             create_simple_products(wcapi, new_simple_products)
-
-            # new_variable_products = format_variable_products(df_new_variable) # DISABLED FOR NOW
-            # create_variable_products(wcapi, new_variable_products) # DISABLED FOR NOW
         else:
             logging.info("No products to create.")
 
@@ -83,8 +83,6 @@ def main():
             # Update products in WooCommerce
             update_products(wcapi, updated_simple_products)
 
-            # updated_variable_products = format_updated_variable_products(df_updated_variable, sku_to_id, category_name_to_id, wcapi) # DISABLED FOR NOW
-            # update_variable_products(wcapi, updated_variable_products) # DISABLED FOR NOW
             logging.info("Products updated.")
         else:
             logging.info("No products to update.")
