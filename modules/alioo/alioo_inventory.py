@@ -1,8 +1,9 @@
 import requests
 from config.settings import ALIOO_API_KEY
+import logging
 
 def get_product_item_id(sku):
-    print(f"Buscando product item id para sku: {sku}")
+    logging.info(f"Buscando product item id para sku: {sku}")
     url = f"https://api.ailoo.cl/v1/inventory/all/sku/{sku}"
     headers = {
         "X-Ailoo-Access-Token": ALIOO_API_KEY
@@ -26,5 +27,5 @@ def get_product_item_id(sku):
              return None
 
     except requests.exceptions.RequestException as e:
-        print(f"Error en la llamada a la API de Alioo: {e}")
+        logging.error(f"Error al buscar product item id para sku: {sku}")
         raise
