@@ -16,7 +16,7 @@ def get_all_woocommerce_products(wcapi):
         df_wc = pd.DataFrame(products)
 
         # Skip persistent product in woocommerce
-        persistent_product_name = ['Booknetic']
+        persistent_product_name = ['Booknetic', 'Entrada Corredor']
 
         if (not df_wc.empty) and ('name' in df_wc.columns):
             df_wc = df_wc[~df_wc['name'].isin(persistent_product_name)]
